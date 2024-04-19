@@ -130,6 +130,7 @@ class MyDataLoader:
             raise 'choose correct reasoning mode: prompt or thor.'
 
 
+# +
 class Preprocessor:
     def __init__(self, config):
         self.config = config
@@ -140,8 +141,18 @@ class Preprocessor:
                                   '{}_Train_v2_Implicit_Labeled_preprocess_finetune.pkl'.format(dataname.capitalize()))
         test_file = os.path.join(self.config.data_dir, dataname,
                                  '{}_Test_Gold_Implicit_Labeled_preprocess_finetune.pkl'.format(dataname.capitalize()))
+        
         train_data = pkl.load(open(train_file, 'rb'))
         test_data = pkl.load(open(test_file, 'rb'))
+        
+#         with open('data/'+str(dataname)+'/'+str(dataname)+'_Train_v2_Implicit_Labeled_preprocess_finetune.txt','w') as f1:
+#             f1.write(str(train_data))
+#             f1.close()
+            
+#         with open('data/'+str(dataname)+'/'+str(dataname)+'_Test_Gold_Implicit_Labeled_preprocess_finetune.txt','w') as f2:
+#             f2.write(str(test_data))
+#             f2.close()  
+        
         ids = np.arange(len(train_data))
         np.random.shuffle(ids)
         lens = 150
