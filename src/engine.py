@@ -132,6 +132,7 @@ class PromptTrainer:
                 res[k] = round(v * 100, 3)
         return res
 
+# +
 class FewshotTrainer:
     def __init__(self, model, config, train_loader, valid_loader, test_loader) -> None:
         self.model = model
@@ -186,25 +187,36 @@ class FewshotTrainer:
         res = {k: v.to(self.config.device) for k, v in res.items()}
         return res
 
+#     def evaluate_step(self, dataLoader=None, mode='valid'):
+#         self.model.eval()
+#         dataLoader = self.valid_loader if dataLoader is None else dataLoader
+#         dataiter = dataLoader
+#         for i, data in tqdm(enumerate(dataiter), total=dataLoader.data_length):
+#             with torch.no_grad():
+
+#                 step_one_fewshots_output = self.model.generate(**data)
+
+#                 step_one_fewshots_data = self.prepare_fewshots(step_one_fewshots_output, data)
+#                 # step_two_fewshots_output = self.model.generate(**step_one_fewshots_data)
+#                 output = self.model.generate(**step_one_fewshots_data)
+
+#                 # step_label_data = self.prepare_step_label(step_two_fewshots_output, step_one_fewshots_data, data)
+#                 # output = self.model.evaluate(**step_label_data)
+#                 self.add_output(data, output)
+#         result = self.report_score(mode=mode)
+#         return result
+
     def evaluate_step(self, dataLoader=None, mode='valid'):
         self.model.eval()
         dataLoader = self.valid_loader if dataLoader is None else dataLoader
         dataiter = dataLoader
         for i, data in tqdm(enumerate(dataiter), total=dataLoader.data_length):
             with torch.no_grad():
-
-                step_one_fewshots_output = self.model.generate(**data)
-
-                step_one_fewshots_data = self.prepare_fewshots(step_one_fewshots_output, data)
-                # step_two_fewshots_output = self.model.generate(**step_one_fewshots_data)
-                output = self.model.generate(**step_one_fewshots_data)
-
-                # step_label_data = self.prepare_step_label(step_two_fewshots_output, step_one_fewshots_data, data)
-                # output = self.model.evaluate(**step_label_data)
+                output = self.model.evaluate(**data)
                 self.add_output(data, output)
         result = self.report_score(mode=mode)
         return result
-
+    
     def re_init(self):
         self.preds, self.golds = defaultdict(list), defaultdict(list)
         self.keys = ['total', 'explicits', 'implicits']
@@ -236,6 +248,9 @@ class FewshotTrainer:
             if isinstance(v, float):
                 res[k] = round(v * 100, 3)
         return res
+
+
+# -
 
 class TotalData:
     def __init__(self, sent, st1prompt, st2prompt, st3prompt, lbprompt, 
