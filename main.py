@@ -7,7 +7,7 @@ import pandas as pd
 from src.utils import set_seed, load_params_LLM
 from src.loader import MyDataLoader
 from src.model import LLMBackbone
-from src.engine import PromptTrainer, ThorTrainer
+from src.engine import PromptTrainer, ThorTrainer, FewshotTrainer
 
 
 class Template:
@@ -37,6 +37,9 @@ class Template:
         elif self.config.reasoning == 'thor':
             print("Choosing thor multi-step infer mode.")
             trainer = ThorTrainer(self.model, self.config, self.trainLoader, self.validLoader, self.testLoader)
+        elif self.config.reasoning == 'fewshot':
+            print("Choosing few-shot prompting infer mode.")
+            trainer = FewshotTrainer(self.model, self.config, self.trainLoader, self.validLoader, self.testLoader)
         else:
             raise 'Should choose a correct reasoning mode: prompt or thor.'
 
@@ -57,7 +60,7 @@ class Template:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--cuda_index', default=0)
-    parser.add_argument('-r', '--reasoning', default='thor', choices=['prompt', 'thor'],
+    parser.add_argument('-r', '--reasoning', default='thor', choices=['prompt', 'thor', 'fewshot'],
                         help='with one-step prompt or multi-step thor reasoning')
     parser.add_argument('-z', '--zero_shot', action='store_true', default=True,
                         help='running under zero-shot mode or fine-tune mode')
