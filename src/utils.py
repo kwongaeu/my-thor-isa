@@ -40,6 +40,16 @@ def prompt_for_polarity_label(context, polarity_expr):
     prompt = context + f' The sentiment polarity is {polarity_expr}.' + ' Based on these contexts, summarize and return the sentiment polarity only, such as positive, neutral, or negative.'
     return prompt
 
+def prompt_for_fewshot_examples(context, target, polarity_expr):
+    new_context = f'Given the sentence "Boot time is super fast, around anywhere from 35 seconds to 1 minute.", the sentiment polarity towards Boot time is positive.
+    Given the sentence "tech support would not fix the problem unless I bought your plan for $150 plus.", the sentiment polarity towards tech support is negative.
+    Given the sentence "but in resume this computer rocks!", the sentiment polarity towards Set up is positive.
+    Given the sentence "Did not enjoy the new Windows 8 and touchscreen functions.", the sentiment polarity towards Windows 8 is negative.
+    Given the sentence "Works well, and I am extremely happy to be back to an apple OS.", the sentiment polarity towards apple OS is positive.'
+    prompt = new_context + f'Given the sentence "{context}", what is the sentiment polarity towards {target}?'
+    print(prompt)
+    return prompt
+
 
 def set_seed(seed):
     torch.manual_seed(seed)

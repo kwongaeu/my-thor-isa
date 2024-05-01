@@ -1,13 +1,12 @@
 import os
 import torch
-import random
 import numpy as np
 import torch.nn as nn
 
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, f1_score
 from collections import defaultdict
-from src.utils import prompt_for_opinion_inferring, prompt_for_polarity_inferring, prompt_for_polarity_label, prompt_for_fewshot_examples
+from src.utils import prompt_for_opinion_inferring, prompt_for_polarity_inferring, prompt_for_polarity_label
 
 
 class PromptTrainer:
@@ -132,130 +131,6 @@ class PromptTrainer:
                 res[k] = round(v * 100, 3)
         return res
 
-class FewshotTrainer:
-    def __init__(self, model, config, train_loader, valid_loader, test_loader) -> None:
-        self.model = model
-        self.config = config
-        self.train_loader, self.valid_loader, self.test_loader = train_loader, valid_loader, test_loader
-        self.save_name = os.path.join(config.target_dir, config.save_name)
-        self.final_score = 0
-        self.final_res = ''
-
-        self.scores, self.lines = [], []
-        self.re_init()
-    
-    def prepare_fewshots(self, aspect_exprs, data):
-        context_A_ids, target_ids = [data[w] for w in 'context_A_ids, target_ids'.strip().split(', ')]
-        contexts_A = [self.model.tokenizer.decode(ids) for ids in context_A_ids]
-        contexts_A = [context.replace('<pad>', '').replace('</s>', '').strip() for context in contexts_A]
-        targets = [self.model.tokenizer.decode(ids) for ids in target_ids]
-        targets = [context.replace('<pad>', '').replace('</s>', '').strip() for context in targets]
-
-        new_prompts = []
-        contexts_B = []
-
-        # # Select random 5 samples from the data
-        # sampleNum = 5
-        # sample_contexts_A, sample_targets, sample_aspects_exprs = zip(*random.sample(list(zip(contexts_A, targets, aspect_exprs)), sampleNum))   
-        
-        # # Create one single pre-prompt that contains all randomly selected samples
-        # for context, target, aspect_expr in zip(sample_contexts_A, sample_targets, sample_aspects_exprs):
-        #     context_B, prompt = prompt_for_fewshot_examples(context, target, aspect_expr)
-        #     new_prompts.extend(prompt)
-        #     contexts_B.extend(context_B)
-
-        for context, target, aspect_expr in zip(contexts_A, targets, aspect_exprs):
-            context_B, prompt = prompt_for_fewshot_examples(context, target, aspect_expr)
-            new_prompts.append(prompt)
-            contexts_B.append(context_B)
-
-        batch_inputs = self.model.tokenizer.batch_encode_plus(new_prompts, padding=True, return_tensors='pt',
-                                                              max_length=self.config.max_length)
-        batch_inputs = batch_inputs.data
-        batch_contexts_B = self.model.tokenizer.batch_encode_plus(contexts_B, padding=True, return_tensors='pt',
-                                                                  max_length=self.config.max_length)
-        batch_contexts_B = batch_contexts_B.data
-
-        res = {
-            'input_ids': batch_inputs['input_ids'],
-            'input_masks': batch_inputs['attention_mask'],
-            'context_B_ids': batch_contexts_B['input_ids'],
-            'target_ids': target_ids,
-        }
-
-        res = {k: v.to(self.config.device) for k, v in res.items()}
-        return res
-
-    def evaluate_step(self, dataLoader=None, mode='valid'):
-        self.model.eval()
-        dataLoader = self.valid_loader if dataLoader is None else dataLoader
-        dataiter = dataLoader
-        for i, data in tqdm(enumerate(dataiter), total=dataLoader.data_length):
-            with torch.no_grad():
-
-                step_one_fewshots_output = self.model.generate(**data)
-
-                step_one_fewshots_data = self.prepare_fewshots(step_one_fewshots_output, data)
-                # step_two_fewshots_output = self.model.generate(**step_one_fewshots_data)
-                output = self.model.generate(**step_one_fewshots_data)
-
-                # step_label_data = self.prepare_step_label(step_two_fewshots_output, step_one_fewshots_data, data)
-                # output = self.model.evaluate(**step_label_data)
-                self.add_output(data, output)
-        result = self.report_score(mode=mode)
-        return result
-
-    def re_init(self):
-        self.preds, self.golds = defaultdict(list), defaultdict(list)
-        self.keys = ['total', 'explicits', 'implicits']
-
-    def add_output(self, data, output):
-        is_implicit = data['implicits'].tolist()
-        gold = data['input_labels']
-        for i, key in enumerate(self.keys):
-            if i == 0:
-                self.preds[key] += output
-                self.golds[key] += gold.tolist()
-            else:
-                if i == 1:
-                    ids = np.argwhere(np.array(is_implicit) == 0).flatten()
-                else:
-                    ids = np.argwhere(np.array(is_implicit) == 1).flatten()
-                self.preds[key] += [output[w] for w in ids]
-                self.golds[key] += [gold.tolist()[w] for w in ids]
-
-    def report_score(self, mode='valid'):
-        res = {}
-        res['Acc_SA'] = accuracy_score(self.golds['total'], self.preds['total'])
-        res['F1_SA'] = f1_score(self.golds['total'], self.preds['total'], labels=[0, 1, 2], average='macro')
-        res['F1_ESA'] = f1_score(self.golds['explicits'], self.preds['explicits'], labels=[0, 1, 2], average='macro')
-        res['F1_ISA'] = f1_score(self.golds['implicits'], self.preds['implicits'], labels=[0, 1, 2], average='macro')
-        res['default'] = res['F1_SA']
-        res['mode'] = mode
-        for k, v in res.items():
-            if isinstance(v, float):
-                res[k] = round(v * 100, 3)
-        return res
-
-class TotalData:
-    def __init__(self, sent, st1prompt, st2prompt, st3prompt, lbprompt, 
-                 aspectExpr, opinionExpr, polarityExpr, lb) -> None:
-        self.sent = sent
-        self.st1prompt = st1prompt
-        self.st2prompt = st2prompt
-        self.st3prompt = st3prompt
-        self.lbprompt = lbprompt
-        self.aspect = aspectExpr
-        self.opinion = opinionExpr
-        self.polarity = polarityExpr
-        self.lb = lb
-
-# sent + "\t" + target + "\t" + label_list[label] + "\t" + str(implicit) + "\n" + \
-#                          step_1_prompt + "\n" + aspect_expr + "\n" + \
-#                          step_2_prompt + "\n" + opinion_expr + "\n" + \
-#                          step_3_prompt + "\n" + polarity_expr + "\n" + \
-#                          step_lb_prompt + "\n" + output_lb + "\n" + \
-#                          'gold: ' + label_list[label] + "\tpredicted: " + label_list[output] + "\n\n\n"
 
 class ThorTrainer:
     def __init__(self, model, config, train_loader, valid_loader, test_loader) -> None:
@@ -413,10 +288,12 @@ class ThorTrainer:
 
     def evaluate_step(self, dataLoader=None, mode='valid'):
         self.model.eval()
-        # dict_data = TotalData()
         dataLoader = self.valid_loader if dataLoader is None else dataLoader
         dataiter = dataLoader
         for i, data in tqdm(enumerate(dataiter), total=dataLoader.data_length):
+            if i < 5:
+                print(str(data))
+            
             with torch.no_grad():
                 step_one_inferred_output = self.model.generate(**data)
 
@@ -429,19 +306,6 @@ class ThorTrainer:
                 step_label_data = self.prepare_step_label(step_three_inferred_output, step_two_inferred_data, data)
                 output = self.model.evaluate(**step_label_data)
                 self.add_output(data, output)
-
-                # reasoning_text = sent + "\t" + target + "\t" + label_list[label] + "\t" + str(implicit) + "\n" + \
-                #          step_one_inferred_output + "\n" + step_one_inferred_data + "\n" + \
-                #          step_two_inferred_output + "\n" + step_two_inferred_data + "\n" + \
-                #          step_three_inferred_output + "\n" + step_label_data + "\n" + \
-                #          step_lb_prompt + "\n" + output + "\n" + \
-                #          'gold: ' + label_list[label] + "\tpredicted: " + label_list[output] + "\n\n\n"
-
-                # with open(f'output_{self.savename}.txt', 'a', encoding='utf8') as f:
-                #     f.write(reasoning_text)
-
-                # with open(f'counter_{self.savename}.txt', 'w', encoding='utf8') as f:
-                #     f.write(str(i))
 
         result = self.report_score(mode=mode)
         return result
