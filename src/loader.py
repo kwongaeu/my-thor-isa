@@ -3,7 +3,7 @@ import math
 import torch
 import numpy as np
 import pickle as pkl
-from src.utils import prompt_direct_inferring, prompt_direct_inferring_masked, prompt_for_aspect_inferring
+from src.utils import prompt_direct_inferring, prompt_direct_inferring_masked, prompt_for_aspect_inferring, prompt_for_fewshot_examples
 from transformers import AutoTokenizer
 from torch.utils.data import Dataset, DataLoader
 import random
@@ -68,6 +68,35 @@ class MyDataLoader:
                     _, prompt = prompt_direct_inferring(line, input_targets[i])
                 else:
                     _, prompt = prompt_direct_inferring_masked(line, input_targets[i])
+                new_tokens.append(prompt)
+
+            batch_input = self.tokenizer.batch_encode_plus(new_tokens, padding=True, return_tensors='pt',
+                                                           max_length=self.config.max_length)
+            batch_input = batch_input.data
+
+            labels = [self.config.label_list[int(w)] for w in input_labels]
+            batch_output = self.tokenizer.batch_encode_plus(labels, max_length=3, padding=True,
+                                                            return_tensors="pt").data
+
+            res = {
+                'input_ids': batch_input['input_ids'],
+                'input_masks': batch_input['attention_mask'],
+                'output_ids': batch_output['input_ids'],
+                'output_masks': batch_output['attention_mask'],
+                'input_labels': torch.tensor(input_labels),
+                'implicits': torch.tensor(implicits)
+            }
+            res = {k: v.to(self.config.device) for k, v in res.items()}
+            return res
+        
+        elif self.config.reasoning == 'fewshot':
+            new_tokens = []
+            for i, line in enumerate(input_tokens):
+                line = ' '.join(line.split()[:self.config.max_length - 25])
+                if self.config.zero_shot == True:
+                    _, prompt = prompt_for_fewshot_examples(line, input_targets[i])
+                else:
+                    _, prompt = prompt_for_fewshot_examples_masked(line, input_targets[i])
                 new_tokens.append(prompt)
 
             batch_input = self.tokenizer.batch_encode_plus(new_tokens, padding=True, return_tensors='pt',
