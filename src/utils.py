@@ -40,13 +40,31 @@ def prompt_for_polarity_label(context, polarity_expr):
     prompt = context + f' The sentiment polarity is {polarity_expr}.' + ' Based on these contexts, summarize and return the sentiment polarity only, such as positive, neutral, or negative.'
     return prompt
 
+e1 = 'Given the sentence Boot time is super fast, around anywhere from 35 seconds to 1 minute., the sentiment polarity towards Boot time is positive.'
+e2 = 'Given the sentence, tech support would not fix the problem unless I bought your plan for $150 plus., the sentiment polarity towards tech support is negative.'
+e3 = 'Given the sentence, but in resume this computer rocks!, the sentiment polarity towards Set up is positive.'
+e4 = 'Given the sentence, Did not enjoy the new Windows 8 and touchscreen functions., the sentiment polarity towards Windows 8 is negative.'
+e5 = 'Given the sentence, Works well, and I am extremely happy to be back to an apple OS., the sentiment polarity towards apple OS is positive.'
+explicit_prompt = e1 + e2 + e3 + e4 +e5
+
+i1 = 'Given the sentence, No installation disk (DVD) is included., the sentiment polarity towards installation disk (DVD) is neutral.'
+i2 = 'Given the sentence, Super light, super sexy and everything just works., the sentiment polarity towards works is positive.'
+i3 = 'Given the sentence, This laptop has only 2 USB ports, and they are both on the same side., the sentiment polarity towards USB ports is negative.'
+i4 = 'Given the sentence, I would have given it 5 starts was it not for the fact that it had Windows 8, the sentiment polarity towards Windows 8 is negative.'
+i5 = 'Given the sentence, From the speed to the multi touch gestures this operating system beats Windows easily., the sentiment polarity towards speed is positive.'
+implicit_prompt = i1 + i2 + i3 + i4 + i5
+
+m1 = 'Given the sentence, Boot time is super fast, around anywhere from 35 seconds to 1 minute., the sentiment polarity towards Boot time is positive.'
+m2 = 'Given the sentence, tech support would not fix the problem unless I bought your plan for $150 plus., the sentiment polarity towards tech support is negative.'
+m3 = 'Given the sentence, but in resume this computer rocks!, the sentiment polarity towards Set up is positive.'
+m4 = 'Given the sentence, Did not enjoy the new Windows 8 and touchscreen functions., the sentiment polarity towards Windows 8 is negative.'
+m5 = 'Given the sentence, Works well, and I am extremely happy to be back to an apple OS., the sentiment polarity towards apple OS is positive.'
+mixed_prompt = m1 + m2 + m3 + m4 + m5
+
 def prompt_for_fewshot_examples(context, target):
-    ex1 = 'Given the sentence Boot time is super fast, around anywhere from 35 seconds to 1 minute., the sentiment polarity towards Boot time is positive.'
-    ex2 = 'Given the sentence, tech support would not fix the problem unless I bought your plan for $150 plus., the sentiment polarity towards tech support is negative.'
-    ex3 = 'Given the sentence, but in resume this computer rocks!, the sentiment polarity towards Set up is positive.'
-    ex4 = 'Given the sentence Did not enjoy the new Windows 8 and touchscreen functions., the sentiment polarity towards Windows 8 is negative.'
-    ex5 = 'Given the sentence Works well, and I am extremely happy to be back to an apple OS., the sentiment polarity towards apple OS is positive.'
-    new_context = ex1 + ex2 + ex3 + ex4 + ex5
+    # new_context = explicit_prompt
+    new_context = implicit_prompt
+    #new_context = mixed_prompt
     prompt = new_context + f'Given the sentence "{context}", what is the sentiment polarity towards {target}?'
     #print(prompt)
     return new_context, prompt
