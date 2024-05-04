@@ -54,5 +54,4 @@ class LLMBackbone(nn.Module):
                 
             output.append(label_dict.get(pred, 0))
         # output = [label_dict.get(w.replace('<pad>', '').replace('</s>', '').strip().lower().split('the answer is ')[1].replace('.', ''), 0) for w in dec]
-        
         return output

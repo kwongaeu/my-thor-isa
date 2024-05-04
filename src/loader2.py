@@ -3,7 +3,7 @@ import math
 import torch
 import numpy as np
 import pickle as pkl
-from src.utils import prompt_direct_inferring, prompt_direct_inferring_twice, prompt_direct_inferring_few_shot, prompt_direct_inferring_masked, prompt_for_aspect_inferring
+from src.utils import prompt_direct_inferring, prompt_direct_inferring_masked, prompt_for_aspect_inferring, prompt_for_fewshot_examples
 from transformers import AutoTokenizer
 from torch.utils.data import Dataset, DataLoader
 import random
@@ -26,10 +26,8 @@ class MyDataLoader:
         self.config = config
         config.preprocessor = Preprocessor(config)
         self.tokenizer = AutoTokenizer.from_pretrained(config.model_path)
-
         self.add_phrase = self.config.add_phrase
-        self.few_shot_example_indices = self.config.few_shot_example_indices
-
+        self.fewshot_example_indices = self.config.fewshot_examples_indices
     def worker_init(self, worked_id):
         worker_seed = torch.initial_seed() % 2 ** 32
         np.random.seed(worker_seed)
@@ -38,27 +36,25 @@ class MyDataLoader:
     def get_data(self):
         cfg = self.config
         path = os.path.join(self.config.preprocessed_dir,
-                            '{}_{}_{}.pkl'.format(cfg.data_name, cfg.model_size, cfg.model_path).replace('/', '-'))
+                            '{}_{}_{}.pkll'.format(cfg.data_name, cfg.model_size, cfg.model_path).replace('/', '-'))
         if os.path.exists(path):
             self.data = pkl.load(open(path, 'rb'))
         else:
             self.data = self.config.preprocessor.forward()
-            pkl.dump(self.data, open(path, 'wb'))
+            #pkl.dump(self.data, open(path, 'wb'))
 
         train_data, valid_data, test_data = self.data[:3]
         self.config.word_dict = self.data[-1]
-        
+
         print('len(test_data): ', len(test_data))
         print('test_data[0][0]: ', test_data[0][0])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][1]: ', test_data[0][1])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][2]: ', test_data[0][2])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][3]: ', test_data[0][3])
-        print('-'*77)
-        
-        
+        print('-' * 77)
         load_data = lambda dataset: DataLoader(MyDataset(dataset), num_workers=0, worker_init_fn=self.worker_init, \
                                                shuffle=self.config.shuffle, batch_size=self.config.batch_size,
                                                collate_fn=self.collate_fn)
@@ -87,13 +83,13 @@ class MyDataLoader:
         
         print('len(test_data): ', len(test_data))
         print('test_data[0][0]: ', test_data[0][0])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][1]: ', test_data[0][1])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][2]: ', test_data[0][2])
-        print('-'*77)
+        print('-' * 77)
         print('test_data[0][3]: ', test_data[0][3])
-        print('-'*77)
+        print('-' * 77)
         
         load_data = lambda dataset: DataLoader(MyDataset(dataset), num_workers=0, worker_init_fn=self.worker_init, \
                                                shuffle=self.config.shuffle, batch_size=self.config.batch_size,
@@ -107,8 +103,8 @@ class MyDataLoader:
         res = [train_loader, valid_loader, test_loader]
 
         return res, self.config
-
-    def get_data_few_shot(self):
+    
+    def get_data_fewshot(self):
         cfg = self.config
         path = os.path.join(self.config.preprocessed_dir,
                             '{}_{}_{}.pkl'.format(cfg.data_name, cfg.model_size, cfg.model_path).replace('/', '-'))
@@ -174,7 +170,6 @@ class MyDataLoader:
         res = [train_loader, valid_loader, test_loader]
 
         return res, self.config
-
     def collate_fn(self, data):
         input_tokens, input_targets, input_labels, implicits = zip(*data)
         if self.config.reasoning == 'prompt':
@@ -185,6 +180,35 @@ class MyDataLoader:
                     _, prompt = prompt_direct_inferring(line, input_targets[i])
                 else:
                     _, prompt = prompt_direct_inferring_masked(line, input_targets[i])
+                new_tokens.append(prompt)
+
+            batch_input = self.tokenizer.batch_encode_plus(new_tokens, padding=True, return_tensors='pt',
+                                                           max_length=self.config.max_length)
+            batch_input = batch_input.data
+
+            labels = [self.config.label_list[int(w)] for w in input_labels]
+            batch_output = self.tokenizer.batch_encode_plus(labels, max_length=3, padding=True,
+                                                            return_tensors="pt").data
+
+            res = {
+                'input_ids': batch_input['input_ids'],
+                'input_masks': batch_input['attention_mask'],
+                'output_ids': batch_output['input_ids'],
+                'output_masks': batch_output['attention_mask'],
+                'input_labels': torch.tensor(input_labels),
+                'implicits': torch.tensor(implicits)
+            }
+            res = {k: v.to(self.config.device) for k, v in res.items()}
+            return res
+        
+        elif self.config.reasoning == 'fewshot':
+            new_tokens = []
+            for i, line in enumerate(input_tokens):
+                line = ' '.join(line.split()[:self.config.max_length - 25])
+                if self.config.zero_shot == True:
+                    _, prompt = prompt_for_fewshot_examples(line, input_targets[i])
+                else:
+                    _, prompt = prompt_for_fewshot_examples_masked(line, input_targets[i])
                 new_tokens.append(prompt)
 
             batch_input = self.tokenizer.batch_encode_plus(new_tokens, padding=True, return_tensors='pt',
@@ -246,6 +270,8 @@ class MyDataLoader:
         else:
             raise 'choose correct reasoning mode: prompt or thor.'
 
+
+# +
     def collate_fn_twice(self, data):
         input_tokens, input_targets, input_labels, implicits = zip(*data)
         if self.config.reasoning == 'prompt_twice':
@@ -352,8 +378,6 @@ class MyDataLoader:
             res = {k: v.to(self.config.device) for k, v in res.items()}
             return res
 
-
-
 class Preprocessor:
     def __init__(self, config):
         self.config = config
@@ -364,8 +388,18 @@ class Preprocessor:
                                   '{}_Train_v2_Implicit_Labeled_preprocess_finetune.pkl'.format(dataname.capitalize()))
         test_file = os.path.join(self.config.data_dir, dataname,
                                  '{}_Test_Gold_Implicit_Labeled_preprocess_finetune.pkl'.format(dataname.capitalize()))
+        
         train_data = pkl.load(open(train_file, 'rb'))
         test_data = pkl.load(open(test_file, 'rb'))
+        
+#         with open('data/'+str(dataname)+'/'+str(dataname)+'_Train_v2_Implicit_Labeled_preprocess_finetune.txt','w') as f1:
+#             f1.write(str(train_data))
+#             f1.close()
+            
+#         with open('data/'+str(dataname)+'/'+str(dataname)+'_Test_Gold_Implicit_Labeled_preprocess_finetune.txt','w') as f2:
+#             f2.write(str(test_data))
+#             f2.close()  
+        
         ids = np.arange(len(train_data))
         np.random.shuffle(ids)
         lens = 150

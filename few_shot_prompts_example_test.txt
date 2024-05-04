@@ -1,0 +1,58 @@
+Pretend that you are an expert of sentiment and opinion analysis. Your task is to evaluate the sentiment polarity (positive, neutral, or negative) towards a given target in a sentence.
+
+Example 1:
+Sentence:
+[sent1]
+Target:
+[target1]
+Answer:
+[answer1]
+
+Example 2:
+Sentence:
+[sent2]
+Target:
+[target2]
+Answer:
+[answer2]
+
+Example 3:
+Sentence:
+[sent3]
+Target:
+[target3]
+Answer:
+[answer3]
+
+Now use the above examples to solve the following tests.
+
+Test 1:
+Sentence:
+[sent4]
+Target:
+[target4]
+Answer:
+[answer4]. Example X was the most helpful one for analyzing this sentence.
+
+Test 2:
+Sentence:
+[sent5]
+Target:
+[target5]
+Answer:
+[answer5]. Example X was the most helpful one for analyzing this sentence.
+
+Test 3:
+Sentence:
+[sent6]
+Target:
+[target6]
+Answer:
+[answer6]. Example X was the most helpful one for analyzing this sentence.
+
+Test 4:
+Sentence:
+[sent_test]
+Target:
+[target_test]
+Answer:
