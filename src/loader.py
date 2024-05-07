@@ -21,6 +21,7 @@ class MyDataset(Dataset):
         return len(self.data)
 
 
+# +
 class MyDataLoader:
     def __init__(self, config):
         self.config = config
@@ -132,26 +133,95 @@ class MyDataLoader:
         n_pos = 0
         n_neut = 0 
         n_neg = 0
-
+        
+        n_imp = 0
+        n_exp = 0
+        
+#         # Consider implicit + polarity
+#         for ind in random_indices:
+#             print("ind: " + str(ind))
+#             if train_data[ind][2] == 0 and train_data[ind][3] == 0: # explicit pos
+#                 self.few_shot_example_indices.append(ind)
+#                 n_exp += 1
+#                 n_pos += 1
+#             elif train_data[ind][2] == 1 and train_data[ind][3] == 0: # explicit neg
+#                 self.few_shot_example_indices.append(ind)
+#                 n_exp += 1
+#                 n_neg += 1
+#             elif train_data[ind][2] == 2 and train_data[ind][3] == 0: # explicit neut
+#                 self.few_shot_example_indices.append(ind)
+#                 n_exp += 1
+#                 n_neut += 1
+#             if n_exp == 3:
+#                 print("filled all explicit samples")
+#                 break
+                
+#         for ind in random_indices:
+#             print("ind: " + str(ind))
+#             if train_data[ind][2] == 0 and train_data[ind][3] == 1: # implicit pos
+#                 self.few_shot_example_indices.append(ind)
+#                 n_imp += 1
+#                 n_pos += 1
+#             elif train_data[ind][2] == 1 and train_data[ind][3] == 1: # implicit neg
+#                 self.few_shot_example_indices.append(ind)
+#                 n_imp += 1
+#                 n_neg += 1
+#             elif train_data[ind][2] == 2 and train_data[ind][3] == 1: # implicit neut
+#                 self.few_shot_example_indices.append(ind)
+#                 n_imp += 1
+#                 n_neut += 1
+#             if n_imp == 6:
+#                 print("filled all implicit samples")
+#                 break
+        
+#         # Consider implicit/explicit
+#         for ind in random_indices:
+#             # implicit is labeled at idx 3
+#             print("ind: " + str(ind))
+#             if train_data[ind][3] == 0:  # false
+#                 self.few_shot_example_indices.append(ind)
+#                 n_exp += 1
+#             if n_exp == 3:
+#                 print("filled all explicit samples")
+#                 break
+                
+#         for ind in random_indices:
+#             # implicit is labeled at idx 3
+#             print("ind: " + str(ind))
+#             if train_data[ind][3] == 1:  # true
+#                 self.few_shot_example_indices.append(ind)
+#                 n_imp += 1
+#             if n_imp == 3:
+#                 print("filled all implicit samples")
+#                 break
+        
+        # Consider polarity
         for ind in random_indices:
-            if train_data[ind][2] == 0:
+            # polarity is labeled at idx 2
+            print("ind: " + str(ind))
+            if train_data[ind][2] == 0 and train_data[ind][3] == 1:
                 self.few_shot_example_indices.append(ind)
                 n_pos += 1
             if n_pos == 2:
+                print("filled all positive samples")
                 break
 
         for ind in random_indices:
-            if train_data[ind][2] == 1:
+            print("ind: " + str(ind))
+            if train_data[ind][2] == 1 and train_data[ind][3] == 1:
                 self.few_shot_example_indices.append(ind)
                 n_neg += 1
             if n_neg == 2:
+                print("filled all negative samples")
                 break
 
         for ind in random_indices:
-            if train_data[ind][2] == 2:
+            print("ind: " + str(ind))
+            if train_data[ind][2] == 2 and train_data[ind][3] == 1:
                 self.few_shot_example_indices.append(ind)
                 n_neut += 1
             if n_neut == 2:
+                print("filled all neutral samples")
                 break
 
         print('self.few_show_example_indices: ', self.few_shot_example_indices)
@@ -322,9 +392,11 @@ class MyDataLoader:
         
         if self.config.reasoning == 'prompt_few_shot':
             new_tokens = []
-            show_prompt_once = True
+            raw_texts = []
+            show_prompt_once = False
             for i, line in enumerate(input_tokens):
                 line = ' '.join(line.split()[:self.config.max_length - 25])
+                raw_texts.append(line)
                 if self.config.zero_shot == True:
                     prompt = prompt_direct_inferring_few_shot(line, input_targets[i], few_shot_examples = self.few_shot_examples,
                                                               show_prompt = show_prompt_once)
@@ -340,8 +412,9 @@ class MyDataLoader:
             labels = [self.config.label_list[int(w)] for w in input_labels]
             batch_output = self.tokenizer.batch_encode_plus(labels, max_length=3, padding=True,
                                                             return_tensors="pt").data
-
+            ##new_tokens_tensor = torch.tensor(new_tokens)
             res = {
+                'raw_texts': raw_texts,
                 'input_ids': batch_input['input_ids'],
                 'input_masks': batch_input['attention_mask'],
                 'output_ids': batch_output['input_ids'],
@@ -349,8 +422,10 @@ class MyDataLoader:
                 'input_labels': torch.tensor(input_labels),
                 'implicits': torch.tensor(implicits)
             }
-            res = {k: v.to(self.config.device) for k, v in res.items()}
+            #res = {k: v.to(self.config.device) for k, v in res.items()}
+            res = {k: v.to(self.config.device) if isinstance(v, torch.Tensor) else v for k, v in res.items()}
             return res
+# -
 
 
 

@@ -9,7 +9,7 @@ def prompt_direct_inferring(context, target, add_phrase):
     new_context = f'Given the sentence: "{context}", '
     prompt = new_context + f'what is the sentiment polarity (positive, negative, or neutral) towards {target}?'
     return new_context, prompt
-    
+
 # BSF
 def prompt_direct_inferring_twice(context, target, add_phrase):
     new_context = f'Given the sentence: "{context}", '
@@ -17,7 +17,7 @@ def prompt_direct_inferring_twice(context, target, add_phrase):
     return new_context, prompt
 
 def prompt_direct_inferring_few_shot(context, target, few_shot_examples, show_prompt = False):
-    with open('./src/few_shot_prompts.txt') as f:
+    with open('./src/few_shot_prompts_example_test.txt') as f:
         instruction_prompt = f.read()
 
     instruction_prompt = instruction_prompt.replace('[sent1]', few_shot_examples['sent'][0]).replace('[target1]', few_shot_examples['target'][0]).replace('[answer1]', few_shot_examples['answer'][0])
@@ -38,7 +38,7 @@ def prompt_direct_inferring_few_shot(context, target, few_shot_examples, show_pr
 #     new_context = f'Given the sentence: "{context}", '
 #     prompt = new_context + f'what is the sentiment polarity (positive, negative, or neutral) towards {target}?'
 #     return new_context, prompt
-    
+
 # def prompt_direct_inferring(context, target):
 #     new_context = f'Given the sentence: "{context}", '
 #     prompt = new_context + f'what is the sentiment polarity towards {target}? Think twice!'

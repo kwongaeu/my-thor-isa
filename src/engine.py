@@ -3,6 +3,7 @@ import torch
 import random
 import numpy as np
 import torch.nn as nn
+import csv
 
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, f1_score
@@ -92,7 +93,17 @@ class PromptTrainer:
             with torch.no_grad():
                 output = self.model.evaluate(**data)
                 self.add_output(data, output)
-        result = self.report_score(mode=mode)
+            result = self.report_score(mode=mode)
+            print(result)
+        error_data_list = [['input', 'answer', 'predicted']]
+        for i in range(len(self.preds['total'])):
+            if self.preds['total'][i] != self.golds['total'][i]:
+                err_data = [self.texts[i], self.golds['total'][i], self.preds['total'][i]]
+                error_data_list.append(err_data)
+#                 print(f"{self.texts[i]}, Answer: {self.golds['total'][i]}, predicted: {self.preds['total'][i]}")
+            with open('error_result.csv', 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(error_data_list)
         return result
 
     def final_evaluate(self, epoch=0):
@@ -112,10 +123,12 @@ class PromptTrainer:
         return res
 
     def re_init(self):
+        self.texts = []
         self.preds, self.golds = defaultdict(list), defaultdict(list)
         self.keys = ['total', 'explicits', 'implicits']
 
     def add_output(self, data, output):
+        self.texts.extend(data['raw_texts'])
         is_implicit = data['implicits'].tolist()
         gold = data['input_labels']
         for i, key in enumerate(self.keys):

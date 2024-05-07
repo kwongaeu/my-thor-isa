@@ -1,7 +1,7 @@
 data_dir: 'data'
 preprocessed_dir: 'data/preprocessed'
 target_dir: 'data/save'
-model_path: 'meta-llama/Llama-2-7b-hf'
+model_path: 'meta-llama/Llama-2-7b'
 model_size: 'base'
 label_list:  ['positive', 'negative', 'neutral']
 emb_dim: 300

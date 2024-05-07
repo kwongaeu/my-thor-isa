@@ -7,7 +7,11 @@ class LLMBackbone(nn.Module):
         super(LLMBackbone, self).__init__()
         self.config = config
         self.engine = T5ForConditionalGeneration.from_pretrained(config.model_path)
+#         access_token = "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" # huggingface token
+#         self.engine = AutoModelForCausalLM.from_pretrained(config.model_path, token=access_token) # for Llama
+#         self.tokenizer = AutoTokenizer.from_pretrained(config.model_path, token=access_token) # for Llama
         self.tokenizer = AutoTokenizer.from_pretrained(config.model_path)
+        
 
     def forward(self, **kwargs):
         input_ids, input_masks, output_ids, output_masks = [kwargs[w] for w in '\
@@ -35,7 +39,7 @@ class LLMBackbone(nn.Module):
         label_dict = {w: i for i, w in enumerate(self.config.label_list)}
         output = []
         for ii, w in enumerate(dec):
-            print(w)
+#             print(w)
             x = w.replace('<pad>', '').replace('</s>', '').strip().lower()
             if ii == 0:
                 print(x)
@@ -53,6 +57,6 @@ class LLMBackbone(nn.Module):
                 pred = 'neutral'
                 
             output.append(label_dict.get(pred, 0))
-        # output = [label_dict.get(w.replace('<pad>', '').replace('</s>', '').strip().lower().split('the answer is ')[1].replace('.', ''), 0) for w in dec]
-        
+#         output = [label_dict.get(w.replace('<pad>', '').replace('</s>', '').strip().lower().split('the answer is ')[1].replace('.', ''), 0) for w in dec]
+#         print('output: ' + str(output))
         return output

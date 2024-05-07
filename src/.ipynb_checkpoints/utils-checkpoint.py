@@ -5,11 +5,44 @@ import numpy as np
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
 
-
-def prompt_direct_inferring(context, target):
-    new_context = f'Given the sentence "{context}", '
-    prompt = new_context + f'what is the sentiment polarity towards {target}?'
+def prompt_direct_inferring(context, target, add_phrase):
+    new_context = f'Given the sentence: "{context}", '
+    prompt = new_context + f'what is the sentiment polarity (positive, negative, or neutral) towards {target}?'
     return new_context, prompt
+
+# BSF
+def prompt_direct_inferring_twice(context, target, add_phrase):
+    new_context = f'Given the sentence: "{context}", '
+    prompt = new_context + f'what is the sentiment polarity (positive, negative, or neutral) towards {target}? ' + add_phrase
+    return new_context, prompt
+
+def prompt_direct_inferring_few_shot(context, target, few_shot_examples, show_prompt = False):
+    with open('./src/few_shot_prompts_example_test.txt') as f:
+        instruction_prompt = f.read()
+
+    instruction_prompt = instruction_prompt.replace('[sent1]', few_shot_examples['sent'][0]).replace('[target1]', few_shot_examples['target'][0]).replace('[answer1]', few_shot_examples['answer'][0])
+    instruction_prompt = instruction_prompt.replace('[sent2]', few_shot_examples['sent'][1]).replace('[target2]', few_shot_examples['target'][1]).replace('[answer2]', few_shot_examples['answer'][1])
+    instruction_prompt = instruction_prompt.replace('[sent3]', few_shot_examples['sent'][2]).replace('[target3]', few_shot_examples['target'][2]).replace('[answer3]', few_shot_examples['answer'][2])
+    instruction_prompt = instruction_prompt.replace('[sent4]', few_shot_examples['sent'][3]).replace('[target4]', few_shot_examples['target'][3]).replace('[answer4]', few_shot_examples['answer'][3])
+    instruction_prompt = instruction_prompt.replace('[sent5]', few_shot_examples['sent'][4]).replace('[target5]', few_shot_examples['target'][4]).replace('[answer5]', few_shot_examples['answer'][4])
+    instruction_prompt = instruction_prompt.replace('[sent6]', few_shot_examples['sent'][5]).replace('[target6]', few_shot_examples['target'][5]).replace('[answer6]', few_shot_examples['answer'][5])
+    
+    instruction_prompt = instruction_prompt.replace('[sent_test]', context).replace('[target_test]', target)
+
+    if show_prompt:
+        print('-'*77)
+        print(instruction_prompt)
+    return instruction_prompt
+
+# def prompt_direct_inferring(context, target):
+#     new_context = f'Given the sentence: "{context}", '
+#     prompt = new_context + f'what is the sentiment polarity (positive, negative, or neutral) towards {target}?'
+#     return new_context, prompt
+
+# def prompt_direct_inferring(context, target):
+#     new_context = f'Given the sentence: "{context}", '
+#     prompt = new_context + f'what is the sentiment polarity towards {target}? Think twice!'
+#     return new_context, prompt
 
 
 def prompt_direct_inferring_masked(context, target):
@@ -40,31 +73,9 @@ def prompt_for_polarity_label(context, polarity_expr):
     prompt = context + f' The sentiment polarity is {polarity_expr}.' + ' Based on these contexts, summarize and return the sentiment polarity only, such as positive, neutral, or negative.'
     return prompt
 
-def prompt_for_fewshot_examples(context, target):
-    ex1 = 'Given the sentence Boot time is super fast, around anywhere from 35 seconds to 1 minute., the sentiment polarity towards Boot time is positive.'
-    ex2 = 'Given the sentence, tech support would not fix the problem unless I bought your plan for $150 plus., the sentiment polarity towards tech support is negative.'
-    ex3 = 'Given the sentence, but in resume this computer rocks!, the sentiment polarity towards Set up is positive.'
-    ex4 = 'Given the sentence Did not enjoy the new Windows 8 and touchscreen functions., the sentiment polarity towards Windows 8 is negative.'
-    ex5 = 'Given the sentence Works well, and I am extremely happy to be back to an apple OS., the sentiment polarity towards apple OS is positive.'
-    new_context = ex1 + ex2 + ex3 + ex4 + ex5
-    prompt = new_context + f'Given the sentence "{context}", what is the sentiment polarity towards {target}?'
-    #print(prompt)
-    return new_context, prompt
-
-
-def prompt_for_fewshot_examples_masked(context, target):
-    ex1 = 'Given the sentence Boot time is super fast, around anywhere from 35 seconds to 1 minute., the sentiment polarity towards Boot time is positive.'
-    ex2 = 'Given the sentence, tech support would not fix the problem unless I bought your plan for $150 plus., the sentiment polarity towards tech support is negative.'
-    ex3 = 'Given the sentence, but in resume this computer rocks!, the sentiment polarity towards Set up is positive.'
-    ex4 = 'Given the sentence Did not enjoy the new Windows 8 and touchscreen functions., the sentiment polarity towards Windows 8 is negative.'
-    ex5 = 'Given the sentence Works well, and I am extremely happy to be back to an apple OS., the sentiment polarity towards apple OS is positive.'
-    new_context = ex1 + ex2 + ex3 + ex4 + ex5
-    prompt = new_context + f'Given the sentence "{context}", the sentiment polarity towards {target} is [mask]'
-    #print(prompt)
-    return new_context, prompt
-
 
 def set_seed(seed):
+    print('seed: ', seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
